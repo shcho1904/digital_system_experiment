@@ -1,0 +1,20 @@
+`timescale 1ns/10ps
+
+module pj_tb;
+reg CLK,RST;
+reg [8:1] number;
+wire [6:0] t_1,t_2,t_3;
+
+project_lab U1(CLK, number, RST, t_1, t_2, t_3);
+	initial begin
+		RST=1;
+		number = 8'b00001111;
+		#5 RST=0;
+	end
+	always begin
+		CLK = 0;
+		#1;
+		CLK = 1;
+		#1;
+	end
+endmodule
