@@ -1,0 +1,134 @@
+`timescale 1ns/10ps
+
+module project_lab(
+	clk, number, rst, pos1, pos2, pos3
+	);
+	input clk;
+	input [8:1] number;
+	input rst;
+	output [6:0] pos1, pos2, pos3;	//pos1 : hund, pos2: ten, pos3: one
+	reg [6:0] pos1, pos2, pos3;
+	wire [6:0] temp_pos1, temp_pos2, temp_pos3;
+	reg [255:1] arr;
+	wire [9:0] bcd_number;	//convert binary to bcd
+	reg [8:1] sub_number;
+	integer count,count_sub,int_num;
+	
+	binary_to_BCD U1(sub_number[8],sub_number[7],sub_number[6],sub_number[5],sub_number[4],sub_number[3],sub_number[2]
+	,sub_number[1],bcd_number[9],bcd_number[8],bcd_number[7],bcd_number[6],bcd_number[5],bcd_number[4],bcd_number[3]
+	,bcd_number[2],bcd_number[1],bcd_number[0]);
+	
+	SEG7 seg_one(0,0,bcd_number[9],bcd_number[8],temp_pos1);
+	SEG7 seg_ten(bcd_number[7],bcd_number[6],bcd_number[5],bcd_number[4],temp_pos2);
+	SEG7 seg_hun(bcd_number[3],bcd_number[2],bcd_number[1],bcd_number[0],temp_pos3);
+
+
+	always@(posedge clk) begin
+		if(rst) begin
+			pos1 = 7'b1111110;
+			pos2 = 7'b1111110;
+			pos3 = 7'b1111110;
+			arr = 255'd0;
+			sub_number = 8'd0;
+			int_num = 0;
+			for(count = 0; count<8; count = count+1) begin
+				int_num = number[count+1]+2**count;
+			end
+			for(count = 2; count<int_num; count = count+1) begin
+				for(count_sub=2*count; count_sub<int_num; count_sub = count_sub+count) begin
+					arr[count_sub] = 1;
+			end
+			arr[1] = 1;	//1 is exception can't use algorithm
+		end
+		end
+		
+		else begin
+				sub_number <= sub_number + 8'd1;
+				if(sub_number > number) begin
+					pos1 <= 7'b1111110;
+					pos2 <= 7'b1111110;
+					pos3 <= 7'b1111110;
+					sub_number <= 8'd0;
+				end
+				if(arr[sub_number] == 0) begin
+					pos1 <= temp_pos1;
+					pos2 <= temp_pos2;
+					pos3 <= temp_pos3;
+				#10;
+			end		
+		end
+	end
+endmodule
+
+module SEG7(a,b,c,d, out);
+input a,b,c,d;
+output [6:0] out;
+reg [6:0] P;
+
+always @(a,b,c,d)
+	begin 
+		case({a,b,c,d})
+			4'b0000: P <= 7'b1111110;
+			4'b0001: P <= 7'b0110000;
+			4'b0010: P <= 7'b1101101;
+			4'b0011: P <= 7'b1111001;
+			4'b0100: P <= 7'b0110011;
+			4'b0101: P <= 7'b1011011;
+			4'b0110: P <= 7'b1011111;
+			4'b0111: P <= 7'b1110000;
+			4'b1000: P <= 7'b1111111;
+			4'b1001: P <= 7'b1110011;
+			default: P <= 7'b0000000;
+		endcase 
+	end
+	assign out = P;
+endmodule 
+
+module binary_to_BCD(
+		B7,B6,B5,B4,B3,B2,B1,B0, 
+		P9,P8,P7,P6,P5,P4,P3,P2,P1,P0
+		);
+		
+input B7,B6,B5,B4,B3,B2,B1,B0;
+output P9,P8,P7,P6,P5,P4,P3,P2,P1,P0;
+wire T10,T9,T8,T7,T6,T5,T4,T3,T2,T1,T0;
+
+assign P0 = B0;
+linedecoder C1(B6,B5,B4,B3,		T3,T2,T1,T0);
+linedecoder C2(T2,T1,T0,B2,	T7,T6,T5,T4);
+linedecoder C3(0,0,B7,T3,		P9,T10,T9,T8);
+linedecoder C4(T6,T5,T4,B1,	P4,P3,P2,P1);
+linedecoder C5(T10,T9,T8,T7,	P8,P7,P6,P5);
+
+endmodule
+
+module linedecoder(
+	A3,A2,A1,A0,
+	S3,S2,S1,S0
+);
+
+input A3,A2,A1,A0;
+output S3,S2,S1,S0;
+
+reg [3:0] out; 
+
+always @(A3,A2,A1,A0)
+begin
+case({A3,A2,A1,A0})
+4'b0000 : out <= 4'b0000; //0
+4'b0001 : out <= 4'b0001; //1
+4'b0010 : out <= 4'b0010; //2
+4'b0011 : out <= 4'b0011; //3
+4'b0100 : out <= 4'b0100; //4
+4'b0101 : out <= 4'b1000; //5
+4'b0110 : out <= 4'b1001; //6
+4'b0111 : out <= 4'b1010; //7
+4'b1000 : out <= 4'b1011; //8
+4'b1001 : out <= 4'b1100; //9
+default : out <= 4'b0000; //NULL
+endcase 
+end
+
+assign {S3,S2,S1,S0} = out;
+
+endmodule
