@@ -1,14 +1,3 @@
-module _2to4dec(S,out);
-	input [1:0] S;
-	output [3:0] out;
-	wire [1:0] Sn;
-	wire [3:0] Im,dec;
-
-	not n0(Sn[0], S[0]), n1(Sn[1], S[1]);
-	and a0(out[0],Sn[1],Sn[0]), a1(out[1],Sn[1],S[0]);
-	and a2(out[2],S[1],Sn[0]), a3(out[3],S[1],S[1]);
-endmodule
-
 module _2to1mux(A0, A1, S, R);
 	input A0, A1,S;
 	output R;
@@ -53,33 +42,6 @@ module eight_bit_2to1mux(I0,I1,S,R);
 	_2to1mux m6(I0[5],I1[5],S,R[5]);
 	_2to1mux m7(I0[6],I1[6],S,R[6]);
 	_2to1mux m8(I0[7],I1[7],S,R[7]);
-endmodule
-
-module _4to1mux(A0,A1,A2,A3,S,R);
-	input A0,A1,A2,A3;
-	input [1:0] S;
-	output R;
-	wire[3:0] im,R_sub;
-	wire sub[1:0];
-	
-	_2to4dec dec(S,im);
-	and a0(R_sub[0],im[0], A0), a1(R_sub[1],im[1], A1), a2(R_sub[2],im[2], A2), a3(R_sub[3],im[3], A3);
-	or o0(sub[0], R_sub[0], R_sub[1]), o1(sub[1], R_sub[2], R_sub[3]);
-	or o3(R, sub[0], sub[1]);
-endmodule
-
-module eight_bit_4to1mux(I0,I1,I2,I3,S,R);
-	input [7:0] I0,I1,I2,I3;
-	input [1:0] S;
-	output [7:0] R;
-	_4to1mux m1(I0[0],I1[0],I2[0],I3[0],S,R[0]);
-	_4to1mux m2(I0[1],I1[1],I2[1],I3[1],S,R[1]);
-	_4to1mux m3(I0[2],I1[2],I2[2],I3[2],S,R[2]);
-	_4to1mux m4(I0[3],I1[3],I2[3],I3[3],S,R[3]);
-	_4to1mux m5(I0[4],I1[4],I2[4],I3[4],S,R[4]);
-	_4to1mux m6(I0[5],I1[5],I2[5],I3[5],S,R[5]);
-	_4to1mux m7(I0[6],I1[6],I2[6],I3[6],S,R[6]);
-	_4to1mux m8(I0[7],I1[7],I2[7],I3[7],S,R[7]);
 endmodule
 
 module four_bit_fa(M,C0,S,C_out, A,B);
@@ -370,121 +332,6 @@ assign sum = a + b;
 endmodule
 
 
-module arithmetic_right_shift(A,A_shift);
-	//8-bit one bit right shift
-	input [7:0] A;
-	output [7:0] A_shift;
-	assign A_shift = {A[7], A[7], A[6], A[5], A[4], A[3], A[2], A[1]};
-endmodule
-
-//d-flipflop
-//flipflop start
-module SR_LATCH(S,R,Q,NQ);
-	input S,R;
-	output Q, NQ;
-	
-	nor nor0(Q,R,Qn), nor1(Qn,S,Q);
-endmodule
-
-module src_latch(Q,Qn,S,R,C);
-	input S,R,C;
-	output Q,Qn;
-	wire nand0_out, nand1_out;
-	nand nand0(nand0_out,S,C), nand1(nand1_out,R,C);
-	nand nand2(Q,nand0_out,Qn), nand3(Qn,nand1_out,Q);
-endmodule
-
-module d_latch(Q,Qn,D,C);
-	input D,C;
-	output Q, Qn;
-	wire Dn;
-	not not0(Dn, D);
-	src_latch src0(Q,Qn,D,Dn,C);
-endmodule
-
-module D_FF(Q,Qn,D,C);
-	input D,C;
-	output Q,Qn;
-	wire Cn, Cnn, d0q, d0qn;
-	not not0(Cn,C), not1(Cnn,Cn);
-	d_latch d0(d0q,d0qn,D,Cn);
-	src_latch src0(Q,Qn,d0q,d0qn,Cnn);
-endmodule
-
-module JK_flip_flop(J,K,CLK,Q,NQ);
-	input CLK, J,K;
-	output Q,NQ;
-	wire nCLK,nk,t1,t2,t3,t4,t5;
-	
-	not(nk, K);
-	and a0(t1, J, NQ), a1(t2, nk, Q);
-	or o0(t1, t2);
-	not(nCLK, CLK);
-	D_FF D0(Q,NQ,t3,nCLK);
-endmodule
-
-module ripplecounter(Q,clk,CLR);
-	input clk, CLR;
-	output [3:0] Q;
-	supply1 H;
-	JK_flip_flop JK0(clk, CLR, H, H, Q[0]);
-	JK_flip_flop JK1(Q[0], CLR, H, H, Q[1]);
-	JK_flip_flop JK2(Q[1], CLR, H, H, Q[2]);
-	JK_flip_flop JK3(Q[2], CLR, H, H, Q[3]);
-endmodule
-//flipflop end
-//register
-module register_8(clk,D,Q);
-//8-bit register
-	input [7:0] D;
-	input clk;
-	output [7:0] Q;
-	wire [7:0] NQ;
-	
-	D_FF df0(Q[0], NQ[0],D[0], clk);
-	D_FF df1(Q[1], NQ[1],D[1], clk);
-	D_FF df2(Q[2], NQ[2],D[2], clk);
-	D_FF df3(Q[3], NQ[3],D[3], clk);
-	D_FF df4(Q[4], NQ[4],D[4], clk);
-	D_FF df5(Q[5], NQ[5],D[5], clk);
-	D_FF df6(Q[6], NQ[6],D[6], clk);
-	D_FF df7(Q[7], NQ[7],D[7], clk);
-endmodule
-
-module register_16(clk,D,Q);
-//8-bit register
-	input [15:0] D;
-	input clk;
-	output [15:0] Q;
-	wire [15:0] NQ;
-	
-	D_FF df0(Q[0], NQ[0],D[0], clk);
-	D_FF df1(Q[1], NQ[1],D[1], clk);
-	D_FF df2(Q[2], NQ[2],D[2], clk);
-	D_FF df3(Q[3], NQ[3],D[3], clk);
-	D_FF df4(Q[4], NQ[4],D[4], clk);
-	D_FF df5(Q[5], NQ[5],D[5], clk);
-	D_FF df6(Q[6], NQ[6],D[6], clk);
-	D_FF df7(Q[7], NQ[7],D[7], clk);
-	D_FF df8(Q[8], NQ[8],D[8], clk);
-	D_FF df9(Q[9], NQ[9],D[9], clk);
-	D_FF df10(Q[10], NQ[10],D[10], clk);
-	D_FF df11(Q[11], NQ[11],D[11], clk);
-	D_FF df12(Q[12], NQ[12],D[12], clk);
-	D_FF df13(Q[13], NQ[13],D[13], clk);
-	D_FF df14(Q[14], NQ[14],D[14], clk);
-	D_FF df15(Q[15], NQ[15],D[15], clk);
-endmodule
-
-//register end
-
-module register_1(clk,D,Q);
-	input D,clk;
-	output Q;
-	wire NQ;
-	D_FF df0(Q, NQ, D, clk);
-endmodule
-
 module mul_signed(M, Q, R, overflow);
 	input [7:0] M,Q;
 	output [7:0] R;
@@ -497,7 +344,7 @@ module mul_signed(M, Q, R, overflow);
 	xor x0(neg, M_m, Q_m);
 	//module eight_bit_fa(M,C0,S,C_out,A,B);
 	wire [7:0] zero;
-	wire or_temp0,or_temp1,or_temp2,or_temp3,or_temp4,or_temp5;
+	wire or_temp0,or_temp1,or_temp2,or_temp3,or_temp4,or_temp5,or_temp6,sign_diff,over_sub;
 	wire [15:0] sub_result,full_result,trash2;
 	assign zero = 8'd0;
 	eight_bit_fa f0(1'b1, 1'b1, neg_M, trash0, zero, M); 
@@ -514,7 +361,10 @@ module mul_signed(M, Q, R, overflow);
 	or(or_temp3, or_temp2, sub_result[11]);
 	or(or_temp4, or_temp3, sub_result[10]);
 	or(or_temp5, or_temp4, sub_result[9]);
-	assign overflow = or_temp5 | sub_result[8];
+	or(or_temp6, or_temp5, sub_result[8]);
+	xor(sign_diff, M_m, Q_m);
+	xor(over_sub, sign_diff, full_result[7]);
+	or(overflow, over_sub, or_temp6);
 	
 	assign R[0] = full_result[0];
 	assign R[1] = full_result[1];
@@ -527,11 +377,11 @@ module mul_signed(M, Q, R, overflow);
 	
 endmodule
 
-//ref: https://github.com/Saadia-Hassan/8x8Multiplier-Using-Vedic-Mathematics/blob/master/vedic8x8.v
+//8x8 bit multiplier ref: https://github.com/Saadia-Hassan/8x8Multiplier-Using-Vedic-Mathematics/blob/master/vedic8x8.v
 
 module testbench();
-	reg [7:0] A, B;
-	wire [7:0] M;
+	reg signed[7:0] A, B;
+	wire signed [7:0] M;
 	wire C;
 	//module mul_signed(M, Q, R, overflow);
 	mul_signed m0(A,B,M,overflow);
@@ -543,6 +393,8 @@ module testbench();
 		#10; A = 11; B = 8;
 		#10; A = 12; B = 14;
 		#10; A = 15; B = 15;
-		#10; A=8'b11111110; B=15;
+		#10; A = -2; B = 15;
+		#10; A = -15; B = 15;
+		#10; A = -5; B = -8;
 	end
 endmodule
